@@ -7,7 +7,9 @@
 # this is the first script, which is a bunch of notes so far and will
 # be developed and then split into sub-scripts
 # ---------------------------------------------------------------------
-
+#
+# 00_DATA-EXPLORATION
+#
 ### SET UP -----------------------------------------------------------
 
 # rm(lis=ls())
@@ -71,6 +73,8 @@ unique(gene_annos$gene_type)
 
 table(clin$vital_status)
 table(clin$race)
+
+## let's create some visualisations to explore the data
 ## pies
 
 # # Function to create a pie chart for a specific column in the dataset
@@ -132,7 +136,7 @@ combined_plots <- test
 
 # # for the interesting vars:
 
-interesting_cols <- c( "race", "vital_status", 
+interesting_cols <- c( "race", "vital_status", "ethnicity",
                        # "age_at_diagnosis", "age_at_index",
                        "occupation_duration_years", "gender", "initial_disease_status", 
                        "chemo_concurrent_to_radiation", "classification_of_tumor",
@@ -174,3 +178,5 @@ for (col in interesting_cols) {
 ### EXTRACTING THE Oncotype DX scores -------------------------------------
 
 ### different models for survival prediction (just use all of the inputs?)
+## create survival at 5 years after diagnosis and 10 years after diagnosis labels
+
