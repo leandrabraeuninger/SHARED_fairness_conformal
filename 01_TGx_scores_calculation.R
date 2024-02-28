@@ -99,9 +99,8 @@ empty_columns <- colSums(is.na(clin_TGx)) == nrow(clin_TGx)
 # listing only the empty ones
 empty_columns <- names(clin_TGx)[empty_columns] 
 # removing them
-clin_TGx <- clin_TGx[ , !empty_columns] # subsetting all rows and only the non-empty cols
-# this outputs an error, which we will swiftly ignore, bc it still does what I want it to
-# Error: negative length vectors are not allowed
+clin_TGx <- clin_TGx[, colSums(is.na(clin_TGx)) != nrow(clin_TGx)] # subsetting all rows and only the non-empty cols
+# 36 vars left
 
 
 ## Mammaprint (MP) ---------------------------------------------------------
@@ -152,3 +151,31 @@ missing <- MP_genes[is.na(rownames(unweightedMPgenes))] # get input from Chris B
 ## define the algorithm (normalised if needed)
 ## add it to the the main dataframe (clin_TGx)
 clin_TGx <- cbind(clin, MP)
+
+
+
+
+######
+# trying to find a recurrence to compare the score to
+
+# alive dead is not it
+# > sum(clin_TGx$vital_status == "Alive")
+# [1] 941
+# > sum(clin_TGx$vital_status == "Dead")
+# [1] 151
+
+# > colnames(clin_TGx)
+# [1] "case_id"                     "case_submitter_id"           "project_id"                  "age_at_index"                "days_to_birth"              
+# [6] "days_to_death"               "ethnicity"                   "gender"                      "race"                        "vital_status"               
+# [11] "year_of_birth"               "year_of_death"               "age_at_diagnosis"            "ajcc_pathologic_m"           "ajcc_pathologic_n"          
+# [16] "ajcc_pathologic_stage"       "ajcc_pathologic_t"           "ajcc_staging_system_edition" "classification_of_tumor"     "days_to_diagnosis"          
+# [21] "days_to_last_follow_up"      "icd_10_code"                 "last_known_disease_status"   "morphology"                  "primary_diagnosis"          
+# [26] "prior_malignancy"            "prior_treatment"             "progression_or_recurrence"   "site_of_resection_or_biopsy" "synchronous_malignancy"     
+# [31] "tissue_or_organ_of_origin"   "tumor_grade"                 "year_of_diagnosis"           "treatment_or_therapy"        "treatment_type"             
+# [36] "ODX"  
+
+# progression_or_recurrence only has not reported
+# same for last_known_disease_status
+# year of diagnosis has some entries,
+
+# maybe I'll have to use survival, not recurrence 
