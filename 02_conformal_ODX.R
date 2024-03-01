@@ -33,11 +33,15 @@
 
 # install.packages("ggplot2")
 # install.packages("patchwork")
+# install.packages("tcltk2")
+
 library(ggplot2)
 library(patchwork)
 library(dplyr)
 library(survival)
 library(survminer)
+library(tcltk2)
+
 
 # load("TCGA data/TCGA-BRCA_LB.Rd")
 ## 60660 x 1095 matrix of unstranded count data of RNAseq
@@ -141,7 +145,35 @@ clin_TGx <- clin_TGx %>%
 
 clin_TGx$event_time <- as.numeric(clin_TGx$event_time)
 
-summary(coxph(Surv(time = event_time, event =  event) ~ ODX + strata(race), clin_TGx))
+# try bins again
+
+clin_TGx <- clin_TGx %>%
+  mutate(surv_bin = ifelse(event_time < 5*365 & event == 1, 1, # patients that died under 5 years -> bin 1
+                           ifelse(event_time < 10*365 & event == 1, 2, # patients that died between 5-10 years -> bin 2
+                           ifelse(event_time > 10*365 & event == 0, 3, # patients for sure alive at 10 years
+                                  4)) # dropouts -> either time_to_last_follow_up under 10 years or time_to_death over 10 years
+  ))
+
+count(as.numeric(clin_TGx$surv_bin))
+bins_hist <- hist(clin_TGx$surv_bin)
+
+bins_hist$counts
+
+plot(clin_TGx$event_time)
+
+plot <- ggplot(clin_TGx$surv_bin, aes(x = "", y = Freq, fill = surv_bin)) +
+  # geom_bar(stat = "identity", width = 1, color = "white") +
+  # coord_polar("y") +
+  # ggtitle(paste("Pie Chart for", col)) +
+  # geom_text(aes(label = paste(Var1, Freq)), position = position_stack(vjust = 0.5)) +
+  theme_void()
+
+# int_vars_plots <- int_vars_plots + plot
+print(plot)
+
+# survival analysis:
+
+# summary(coxph(Surv(time = event_time, event =  event) ~ ODX + strata(race), clin_TGx))
 
 # Call:
 #   coxph(formula = Surv(time = event_time, event = event) ~ ODX + 
@@ -162,28 +194,98 @@ summary(coxph(Surv(time = event_time, event =  event) ~ ODX + strata(race), clin
 
 ## it seems ODX is not significant for survival?
 
-fit <- survfit(Surv(time = event_time, event =  event) ~ ODX + strata(race), clin_TGx)
+# Survfit is Kaplan Meier
+# only takes categorical values
+race_fit <- survfit(Surv(time = event_time, event =  event) ~ race, clin_TGx)
+summary(survfit(Surv(time = event_time, event = event) ~ race, clin_TGx))
+plot(survfit(Surv(time = event_time, event = event) ~ race + surv_bin, clin_TGx))
+
+fit <- race_fit
+# fit <- survfit(Surv(time = event_time, event =  event) ~ strata(race), clin_TGx)
 # ggsurvplot(fit)
-# plot(fit)
+
+plot(fit)
+
 
 ###################
-ggsurvplot(
+race_survplot <- ggsurvplot(
   fit,                     # survfit object with calculated statistics.
   pval = TRUE,             # show p-value of log-rank test.
   conf.int = TRUE,         # show confidence intervals for 
   # point estimaes of survival curves.
-  #conf.int.style = "step",  # customize style of confidence intervals
-  xlab = "Time in years",   # customize X axis label
-  xlim=c(0,2),
+  conf.int.style = "step",  # customize style of confidence intervals
+  xlab = "Time in days",   # customize X axis label
+  # xlim=c(0,2),
   ggtheme = theme_light(), # customize plot and risk table with a theme.
-  # risk.table = "abs_pct",  # absolute number and percentage at risk.
-  # risk.table.y.text.col = T,# colour risk table text annotations.
-  # risk.table.y.text = FALSE,# show bars instead of names in text annotations
+  risk.table = "abs_pct",  # absolute number and percentage at risk.
+  risk.table.y.text.col = T,# colour risk table text annotations.
+  risk.table.y.text = FALSE,# show bars instead of names in text annotations
   # in legend of risk table.
-  # ncensor.plot = TRUE,      # plot the number of censored subjects at time t
+  ncensor.plot = TRUE,      # plot the number of censored subjects at time t
   surv.median.line = "hv",  # add the median survival pointer.
   # legend.labs = 
   #   c("low","med","high"),    # change legend labels.
   palette = 
-    c("pink","#E7B800", "#2E9FDF") # custom color palettes.
+    c("pink","#E7B800", "#2E9FDF", "lightgreen", "#F08080") # custom color palettes.
 )
+
+
+# TODO
+# let's bin the scores into risk categories
+# then redo the kaplan meier curves based on those and on race
+
+summary(coxph(Surv(event_time,event)~onco_un+norms, clin_TGx))
+
+
+## save as tix image for nice overleaf integration
+# Open the tiximage device
+tiximage()
+
+# Draw your ggplot plot
+print(race_survplot)
+
+# Save the plot as a TIX image
+dev.copy(tiximage, "race_survplot.tix")
+
+# Close the tiximage device
+dev.off()
+
+
+## ------------------------------------------------------------------------
+## conformal survival analysis
+# from: https://github.com/zhimeir/cfsurvival
+
+# if (!require("devtools")){
+#   install.packages("devtools")
+# }
+# devtools::install_github("zhimeir/cfsurvival")
+
+library(cfsurvival)
+
+# Generate data
+set.seed(24601)
+n <- 2000
+X <- runif(n, 0, 2)
+T <- exp(X + rnorm(n,0,1))
+C <- rexp(n, rate = 0.05)
+event <- (T <= C)
+censored_T <- pmin(T, C)
+data <- data.frame(X = X, C = C, event = event, censored_T = censored_T)
+
+# Prediction point
+n_test <- 1000
+X_test <- runif(n_test, 0, 2)
+T_test <- exp(X_test + rnorm(n,0,1))
+
+# Running cfsurvival under completely independent censoring with c0 = 30 
+c0 <- 30
+pr_list <- rep(0.5, n)
+pr_new_list <- rep(0.5, n_test)
+
+# Use the Cox model
+res <- cfsurv(x = X_test, c_list = c0, pr_list = pr_list, pr_new_list = pr_new_list,
+              Xtrain = X, C = C, event = event, time = censored_T, 
+              alpha = 0.1, model = "aft")
+
+# Examine the result
+cat(sprintf("The coverage is %.3f.\n", mean(res <= T_test)))
