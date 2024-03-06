@@ -200,6 +200,11 @@ race_fit <- survfit(Surv(time = event_time, event =  event) ~ race, clin_TGx)
 summary(survfit(Surv(time = event_time, event = event) ~ race, clin_TGx))
 plot(survfit(Surv(time = event_time, event = event) ~ race + surv_bin, clin_TGx))
 
+## NON-STRATIFIED
+# Fit Kaplan-Meier survival curve without stratification
+# fit <- survfit(Surv(time, status) ~ 1, data = your_data)
+
+
 fit <- race_fit
 # fit <- survfit(Surv(time = event_time, event =  event) ~ strata(race), clin_TGx)
 # ggsurvplot(fit)
@@ -289,3 +294,55 @@ res <- cfsurv(x = X_test, c_list = c0, pr_list = pr_list, pr_new_list = pr_new_l
 
 # Examine the result
 cat(sprintf("The coverage is %.3f.\n", mean(res <= T_test)))
+
+
+# or simpler:
+# clin_TGx$event_time <- as.numeric(clin_TGx$days_to_death)
+# Fit a Cox proportional hazards model (you can choose any appropriate model)
+fit <- coxph(Surv(event_time, event) ~ onco_un+norms, clin_TGx)
+
+
+# Predict survival times for each observation
+predicted_survival <- predict(fit, type = "expected")
+
+# Calculate prediction errors
+prediction_errors <- abs(predicted_survival - clin_TGx$event_time)
+
+# Order observations by prediction error
+ordered_data <- clin_TGx[order(prediction_errors), ]
+
+# Calculate conformal prediction intervals
+confidence_level <- 0.95
+alpha <- (1 - confidence_level) / 2
+quantiles <- qnorm(c(alpha, 1 - alpha))
+
+lower_bound <- predicted_survival - quantiles[2] * prediction_errors
+upper_bound <- predicted_survival + quantiles[2] * prediction_errors
+
+# Implement cross-validation if desired
+
+# Assess performance
+
+
+test_plot <- ggsurvplot(
+  fit,                     # survfit object with calculated statistics.
+  pval = TRUE,             # show p-value of log-rank test.
+  conf.int = TRUE,         # show confidence intervals for 
+  # point estimaes of survival curves.
+  conf.int.style = "step",  # customize style of confidence intervals
+  xlab = "Time in days",   # customize X axis label
+  # xlim=c(0,2),
+  ggtheme = theme_light(), # customize plot and risk table with a theme.
+  risk.table = "abs_pct",  # absolute number and percentage at risk.
+  risk.table.y.text.col = T,# colour risk table text annotations.
+  risk.table.y.text = FALSE,# show bars instead of names in text annotations
+  # in legend of risk table.
+  ncensor.plot = TRUE,      # plot the number of censored subjects at time t
+  surv.median.line = "hv",  # add the median survival pointer.
+  # legend.labs = 
+  #   c("low","med","high"),    # change legend labels.
+  palette = 
+    c("pink","#E7B800", "#2E9FDF", "lightgreen", "#F08080") # custom color palettes.
+)
+
+test_plot + lower_bound + upper_bound
