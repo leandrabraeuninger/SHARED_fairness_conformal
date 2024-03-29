@@ -37,7 +37,7 @@ library(ggplot2)
 library(patchwork)
 library(dplyr)
 
-# load("TCGA data/TCGA-BRCA_LB.Rd")
+# load("data/TCGA data/TCGA-BRCA_LB.Rd")
 ## 60660 x 1095 matrix of unstranded count data of RNAseq
 ## rows are genes, cols are patients
 # 
@@ -63,7 +63,6 @@ og <- c(prolif,invasion,HER2,oest,g,b,cd)
 refs <- c("GAPDH","RPLP0","GUSB","ACTB","TFRC")
 annos <- gene_annos
 
-########ok so the formula uses RT-qPCR normalised the the refs so lets just normalise by the mean of the refs
 onco_un <- 0.47*apply(data[match(HER2,annos$gene_name),],2,sum)-
             0.34*apply(data[match(oest,annos$gene_name),],2,sum)+
             1.04*apply(data[match(prolif,annos$gene_name),],2,sum)+
@@ -71,7 +70,9 @@ onco_un <- 0.47*apply(data[match(HER2,annos$gene_name),],2,sum)-
             0.05*data[match(cd,annos$gene_name),]-
             0.08*data[match(g,annos$gene_name),]-
             0.07*data[match(b,annos$gene_name),]
+## RT-qPCR based , so we normalise
 norms <- apply(data[match(refs,annos$gene_name),],2,sum)
+
 hist(onco_un)
 hist(norms)
 hist(onco_un/norms)

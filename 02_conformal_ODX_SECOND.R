@@ -113,12 +113,15 @@ cutpoint_1 <- surv_cutpoint(data = clin_TGx, time = "event_time", event = "event
 # he created bins at <1 year, 1-2 years, and >2 years
 # I am doing similarly (see test data bit) with the following bins:
 # <1 year, 1-5 years, and >5 years
+
 temp <- clin_TGx[clin_TGx$event == 1, ] # filtering for death events to get the cutpoints
 temp$event[temp$event_time > 365] <- 0 # setting the event to 0 for the deaths that occured after the first year 
 cutpoint_2 <- surv_cutpoint(data = temp, time="event_time", event = "event", variables ="ODX")
 # extracting the cutpoints and putting them togethe:
 cutpoints <- unlist(c(cutpoint_1$cutpoint[1],cutpoint_2$cutpoint[1]))
+
 # these are the cutpoints for the ODX scores to be sorted into risk bins
+
 # TODO check that this is entirely correct, because we haven't used the 5y cutoff here, 
 # just two somewhat random cutoff points
 # TODO check that this makes sense! is a higher ODX score really a higher risk?
@@ -180,6 +183,7 @@ hist(clin_TGx$true_risk_bin)
 # if not, assign the score with the "smallest positive distance between the ODX score and the 
 # prediction value that would have assigned the appropriate risk category" (taken from Chris B's recidivism task)
 
+# SCORE FUNCTION:
 clin_TGx <- clin_TGx %>%
   mutate(conf_score = ifelse(pred_risk_bin == true_risk_bin, 0, # if correct bin assigned the conformal score is 0, otherwise
                              ifelse(pred_risk_bin == 1 & true_risk_bin == 2, abs(ODX - cutpoints[1]), 
@@ -190,5 +194,75 @@ clin_TGx <- clin_TGx %>%
                                                                 ifelse(pred_risk_bin == 3 & true_risk_bin == 2, abs(ODX - cutpoints[2]),
                                                                        NA # else NA
                                                   ))))))))
-# IT WORKS!
-# ok what do I do with this now?
+# IT WORKS! (no NAs, either)
+
+plot(density(clin_TGx$conf_score))
+
+# do I need this:
+# cal_scores <- 1 - cal_smx[cbind(1:n, cal_labels)]
+# no, bc in the gentle introduction paper, they describe the conformal score for their softmax this way around:
+# "The score is high when the softmax output of the true class is low, i.e., when the model is badly wrong"
+# in my case, the distance error that is my conformal score is already large when the model is badly wrong,
+# so no need to flip it
+
+cal_scores <- clin_TGx$conf_score
+
+## now get the quantile
+# we set alpha as a function of the calibration set size
+# for now we just pick
+alpha <- 0.05
+# am I correct in using the size of the calibration set as n here? or do I need to use all of the data or the test?
+calib_data <- clin_TGx
+n <- length(calib_data)
+# Calculate the quantile level
+q_level <- ceiling((n + 1) * (1 - alpha)) / n
+
+# Calculate the quantile
+qhat <- quantile(cal_scores, probs = q_level, type = 6, names = FALSE)
+# with the current alpha, it can only ever choose a set length of 2
+
+#### TEST
+# in softmax case:
+# val_smx <- predict(model, newdata = val_X, type = "response")
+# are we predicting the survival bins here? what are we predicting?
+# which 
+# prediction_sets <- val_smx >= (1 - qhat)
+
+## prediction_sets
+lo_bound <- clin_TGx$ODX - qhat
+up_bound <- clin_TGx$ODX + qhat
+
+# bin in which the lower bound lies
+lo_bound_bin <- ifelse(lo_bound <= cutpoints[1], 1, 
+                       ifelse(lo_bound < cutpoints[2], 2, 3))
+
+# bin in which the upper bound lies
+up_bound_bin <- ifelse(up_bound <= cutpoints[1], 1, 
+                       ifelse(up_bound < cutpoints[2], 2, 3))
+
+prediction_sets <- Map(list, lo_bound_bin, up_bound_bin)
+
+# add the middle bin if the set spans it
+
+# Add entry with value 2 to elements where (up_bound_bin - lo_bound_bin) > 1
+# and only one of the values where they are the same
+prediction_sets <- Map(function(x, y) {
+  if ((y - x) == 0) {
+    c(y)
+  } else {
+  if ((y - x) > 1) {
+    c(x, y, 2)
+  } else {
+    c(x, y)
+  }
+}
+  }, lo_bound_bin, up_bound_bin)
+
+
+# voilà I have my prediction sets
+
+clin_TGx <- clin_TGx %>%
+  mutate(prediction_sets = prediction_sets)
+
+# still need to do this properly on the split data
+
