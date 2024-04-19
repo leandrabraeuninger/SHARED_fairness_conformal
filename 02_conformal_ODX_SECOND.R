@@ -219,7 +219,6 @@ q_level <- ceiling((n + 1) * (1 - alpha)) / n
 
 # Calculate the quantile
 qhat <- quantile(cal_scores, probs = q_level, type = 6, names = FALSE)
-# with the current alpha, it can only ever choose a set length of 2
 
 #### TEST
 # in softmax case:
