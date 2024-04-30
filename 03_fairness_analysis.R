@@ -49,14 +49,21 @@ library(dplyr)
 
 ### FAIRNESS ANALYSIS --------------------------------------------------
 mean(lengths(prediction_sets))
+# 2.818681
 
-mean_by_subgroup <- aggregate(lengths(prediction_sets) ~ race, data = clin_TGx, FUN = mean)
-#                               race lengths(prediction_sets)
-# 1 american indian or alaska native                 2.000000
-# 2                            asian                 2.803279
-# 3        black or african american                 2.873626
-# 4                     not reported                 2.894737
-# 5                            white                 2.922975
-# right there's essentially no difference?
-# run again after proper data split
+mean_by_subgroup <- aggregate(lengths(prediction_sets) ~ race, data = test, FUN = mean)
+# race lengths(prediction_sets)
+# 1                     asian                 2.521739
+# 2 black or african american                 2.783333
+# 3              not reported                 2.696970
+# 4                     white                 2.870968
+
+# larger average mean for white subpopulation
+# that sounds like the uncertainty would be higher for the people of that subpopulation
+
+
+
+# !!
+# I'm not saying anything about whether or not they are more or less right
+
 
