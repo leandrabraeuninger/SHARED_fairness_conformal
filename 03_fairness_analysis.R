@@ -33,6 +33,7 @@
 
 # install.packages("ggplot2")
 # install.packages("patchwork")
+# install.packages("dplyr")
 library(ggplot2)
 library(patchwork)
 library(dplyr)
@@ -51,7 +52,8 @@ library(dplyr)
 mean(lengths(prediction_sets))
 # 2.818681
 
-mean_by_subgroup <- aggregate(lengths(prediction_sets) ~ race, data = test, FUN = mean)
+
+mean_by_subgroup <- data.frame(aggregate(lengths(prediction_sets) ~ race, data = test, FUN = mean))
 # race lengths(prediction_sets)
 # 1                     asian                 2.521739
 # 2 black or african american                 2.783333
@@ -60,10 +62,43 @@ mean_by_subgroup <- aggregate(lengths(prediction_sets) ~ race, data = test, FUN 
 
 # larger average mean for white subpopulation
 # that sounds like the uncertainty would be higher for the people of that subpopulation
-
+colnames(mean_by_subgroup)[2] <- "mean_length"
 
 
 # !!
 # I'm not saying anything about whether or not they are more or less right
 
+ggplot(mean_by_subgroup, aes(x = race, y = mean_length, fill = race)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Mean Lengths of Prediction Sets by Race",
+       x = "Race",
+       y = "Mean Length",
+       fill = "Race") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+# seems very minimally informative
+# the uncertainty is quite high. with 3 risk bins available, and almost always 
+# including all 3 risk bins (mean is above 2.5 in all subgroups), that means the uncertainty is really high
+# my bins are a bit useless probably
+
+range_by_subgroup <- data.frame(aggregate(lengths(prediction_sets) ~ race, data = test, FUN = range))
+# all subgroups have predictions in all risk bins
+
+# count(lengths(test$prediction_sets))
+table(lengths(test$prediction_sets))
+
+# Count occurrences of unique lengths of prediction sets by race
+occurrences_by_race <- test %>%
+  group_by(race, lengths_prediction_sets = lengths(prediction_sets)) %>%
+  count() %>%
+  ungroup() %>%
+  rename(occurrences = n)
+
+ggplot(occurrences_by_race, aes(x = lengths_prediction_sets, y = occurrences, fill = race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Occurrences of Unique Lengths of Prediction Sets by Race",
+       x = "Length of Prediction Sets",
+       y = "Occurrences",
+       fill = "Race") +
+  theme_minimal()
