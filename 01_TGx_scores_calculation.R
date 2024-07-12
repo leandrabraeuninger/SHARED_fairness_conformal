@@ -1,10 +1,7 @@
 # ---------------------------------------------------------------------
 # FAIRNESS VIA CONFORMAL UNCERTAINTY QUANTIFICATION FOR TRANSCRIPTOMICS
 #
-# this mini-project is described in more detail here:
-# https://www.overleaf.com/read/nxpvdqkmsgnp#b69020
-#
-# second script to extract the Oncotype Dx and Mammaprint scores from
+# script to extract the Oncotype Dx and Mammaprint scores from
 # the TCGA transcriptomic profiles
 # ---------------------------------------------------------------------
 #
@@ -12,17 +9,10 @@
 #
 ### SET UP -----------------------------------------------------------
 
-## TODO
-# finish this to make sure it can run both independently and with the 
-# other scripts
-
 # rm(lis=ls())
 # setwd("")
 # read.
 
-# DESeq2 
-# not available for this version of R
-#  "R version 4.3.1 (2023-06-16 ucrt)"
 # if (!require("BiocManager", quietly = TRUE))
 #   install.packages("BiocManager")
 # 
@@ -41,7 +31,7 @@ library(dplyr)
 ## 60660 x 1095 matrix of unstranded count data of RNAseq
 ## rows are genes, cols are patients
 # 
-## load("TCGA data/gene_annos.Rd")
+# load("data/TCGA data/gene_annos.Rd")
 
 
 
@@ -89,8 +79,6 @@ all.equal(rownames(clin) , names(ODX)) # they are
 
 clin_TGx <- cbind(clin, ODX) # add the ODX scores to the full table
 
-## TODO first clean up clin and remove the empty cols
-# could be moved to before we add the ODX scores for simplicity
 
 # the table does not use NA for empty values, so let's replace that
 clin_TGx[clin_TGx == "'--"] <- NA
@@ -154,29 +142,4 @@ missing <- MP_genes[is.na(rownames(unweightedMPgenes))] # get input from Chris B
 clin_TGx <- cbind(clin, MP)
 
 
-
-
-######
-# trying to find a recurrence to compare the score to
-
-# alive dead is not it
-# > sum(clin_TGx$vital_status == "Alive")
-# [1] 941
-# > sum(clin_TGx$vital_status == "Dead")
-# [1] 151
-
-# > colnames(clin_TGx)
-# [1] "case_id"                     "case_submitter_id"           "project_id"                  "age_at_index"                "days_to_birth"              
-# [6] "days_to_death"               "ethnicity"                   "gender"                      "race"                        "vital_status"               
-# [11] "year_of_birth"               "year_of_death"               "age_at_diagnosis"            "ajcc_pathologic_m"           "ajcc_pathologic_n"          
-# [16] "ajcc_pathologic_stage"       "ajcc_pathologic_t"           "ajcc_staging_system_edition" "classification_of_tumor"     "days_to_diagnosis"          
-# [21] "days_to_last_follow_up"      "icd_10_code"                 "last_known_disease_status"   "morphology"                  "primary_diagnosis"          
-# [26] "prior_malignancy"            "prior_treatment"             "progression_or_recurrence"   "site_of_resection_or_biopsy" "synchronous_malignancy"     
-# [31] "tissue_or_organ_of_origin"   "tumor_grade"                 "year_of_diagnosis"           "treatment_or_therapy"        "treatment_type"             
-# [36] "ODX"  
-
-# progression_or_recurrence only has not reported
-# same for last_known_disease_status
-# year of diagnosis has some entries,
-
-# maybe I'll have to use survival, not recurrence 
+## the MP part was abandoned for the continuing analysis
