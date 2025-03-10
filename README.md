@@ -16,4 +16,4 @@ ucaklbr@ucl.ac.uk
 
 
 ## data
-The data is too large to be uploaded to GitHub, so please reach out directly via the email address above if you need access to the data.
+Please reach out directly via the email address above if you need access to the data.
